@@ -1,0 +1,7 @@
+{
+  "name": "Datatype Wireless Ias",
+  "category": "DATATYPE",
+  "icon": "\ud83d\udcd1",
+  "description": "Data Format Importers & Parsers component for APK.audio ecosystem.",
+  "entry": "main.py"
+}

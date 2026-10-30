@@ -3,5 +3,6 @@
   "category": "DATATYPE",
   "icon": "\ud83d\udcd1",
   "description": "IAS HTML frequency-coordination report importer: reads the assignment tables into channel records and publishes them on APK.audio/System/DataMigration/IAS/ImportedData.",
-  "entry": "main.py"
+  "entry": "ias_importer.rs",
+  "tech": "rust"
 }

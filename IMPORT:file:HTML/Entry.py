@@ -1,6 +1,6 @@
 # Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
 # MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
-# Reads an Inspired Audio Systems HTML report and returns the marker table
+# Reads an IAS (Intermodulation Analysis System) HTML report and returns the marker table
 # DataMigration imports from it.
 #
 # Owns: the IAS HTML dialect only. Row extraction itself belongs to the Rust

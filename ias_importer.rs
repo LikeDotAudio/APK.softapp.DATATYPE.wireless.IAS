@@ -47,87 +47,91 @@ pub fn parse_ias_report(file_path: impl AsRef<Path>) -> Result<IasParseResult, S
     parse_ias_report_str(&content, &path.to_string_lossy())
 }
 
-/// Standalone parser for raw IAS HTML Report content strings.
+/// Parse raw IAS HTML report content and publish the result, retained.
 pub fn parse_ias_report_str(content: &str, source_name: &str) -> Result<IasParseResult, String> {
+    let result = classify_ias_str(content, source_name)?;
+    if let Ok(json_payload) = serde_json::to_string_pretty(&result) {
+        publish_to_mqtt(&ias_mqtt_topic(), &json_payload);
+    }
+    Ok(result)
+}
+
+fn text_of(el: scraper::ElementRef<'_>) -> String {
+    el.text().collect::<Vec<_>>().join("").trim().to_string()
+}
+
+/// Parse raw IAS HTML report content. No side effect — `parse_ias_report_str` publishes.
+///
+/// The report is a sequence of `<p>Zone: …</p>` headings, each followed by the
+/// `table.Assignment` blocks of that zone. They are walked in ONE pass, in document
+/// order, so a table takes the zone heading above it. (Reading every heading first and
+/// every table after left each channel with the last zone: all 168 channels of
+/// `test_data/report.html` came out "Zone 6".)
+///
+/// A cell the report leaves empty stays empty, and `band_info` is empty: an IAS report
+/// carries no band column, and a placeholder ("Generic RF", "CH_<n>", "UHF") reads
+/// downstream as something the report said.
+pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResult, String> {
     let mut channels = Vec::new();
     let document = Html::parse_document(content);
 
-    let tr_selector = Selector::parse("tr").map_err(|e| format!("Selector error: {:?}", e))?;
-    let td_selector = Selector::parse("td").map_err(|e| format!("Selector error: {:?}", e))?;
-    let th_selector = Selector::parse("th").map_err(|e| format!("Selector error: {:?}", e))?;
-    let b_selector = Selector::parse("b").map_err(|e| format!("Selector error: {:?}", e))?;
-    let p_selector = Selector::parse("p").map_err(|e| format!("Selector error: {:?}", e))?;
+    let sel = |s: &str| Selector::parse(s).map_err(|e| format!("Selector error: {:?}", e));
+    let walk_selector = sel("p, table.Assignment")?;
+    let tr_selector = sel("tr")?;
+    let td_selector = sel("td")?;
+    let th_selector = sel("th")?;
+    let b_selector = sel("b")?;
 
-    let mut current_zone = "Default Zone".to_string();
-    let mut current_group = "General".to_string();
+    let mut current_zone = String::new();
 
-    // Parse Zones from <p style="... font-size: large ...">Zone: ...</p>
-    for p_elem in document.select(&p_selector) {
-        let p_text = p_elem.text().collect::<Vec<_>>().join("");
-        if p_text.contains("Zone:") {
+    for el in document.select(&walk_selector) {
+        if el.value().name() == "p" {
+            // <p style="... font-size: large ...">Zone: ...</p>
+            let p_text = text_of(el);
             if let Some(zone_str) = p_text.split("Zone:").nth(1) {
                 current_zone = zone_str.trim().to_string();
             }
-        }
-    }
-
-    // Parse Table Assignments
-    let assignment_selector = Selector::parse("table.Assignment").map_err(|e| format!("Selector error: {:?}", e))?;
-    for table in document.select(&assignment_selector) {
-        // Extract Group/Header from <th>
-        if let Some(th) = table.select(&th_selector).next() {
-            current_group = th.text().collect::<Vec<_>>().join("").trim().to_string();
+            continue;
         }
 
-        for row in table.select(&tr_selector) {
+        // A table's group is its own <th>; a table without one has none.
+        let group = el.select(&th_selector).next().map(text_of).unwrap_or_default();
+
+        for row in el.select(&tr_selector) {
             let cells: Vec<_> = row.select(&td_selector).collect();
-            if cells.len() >= 4 {
-                // Read chunks of 4 td cells (IAS formats up to 2 channel blocks per row)
-                for chunk in cells.chunks(4) {
-                    if chunk.len() == 4 {
-                        let device = chunk[0].text().collect::<Vec<_>>().join("").trim().to_string();
-                        let name = chunk[1].text().collect::<Vec<_>>().join("").trim().to_string();
-                        
-                        // Frequency is wrapped inside <b>
-                        let freq_text = if let Some(b_elem) = chunk[3].select(&b_selector).next() {
-                            b_elem.text().collect::<Vec<_>>().join("").trim().to_string()
-                        } else {
-                            chunk[3].text().collect::<Vec<_>>().join("").trim().to_string()
-                        };
-
-                        if let Ok(freq_mhz) = freq_text.parse::<f64>() {
-                            if freq_mhz > 100.0 && freq_mhz < 3000.0 {
-                                channels.push(IasChannel {
-                                    zone: current_zone.clone(),
-                                    group: current_group.clone(),
-                                    device: if device.is_empty() { "Generic RF".into() } else { device },
-                                    name: if name.is_empty() { format!("CH_{}", channels.len() + 1) } else { name },
-                                    freq_mhz,
-                                    band_info: "UHF".to_string(),
-                                });
-                            }
-                        }
+            // IAS lays out up to two channel blocks of 4 cells per row.
+            for chunk in cells.chunks_exact(4) {
+                let device = text_of(chunk[0]);
+                let name = text_of(chunk[1]);
+                // Frequency is wrapped inside <b>
+                let freq_text = match chunk[3].select(&b_selector).next() {
+                    Some(b_elem) => text_of(b_elem),
+                    None => text_of(chunk[3]),
+                };
+                if let Ok(freq_mhz) = freq_text.parse::<f64>() {
+                    if freq_mhz > 100.0 && freq_mhz < 3000.0 {
+                        channels.push(IasChannel {
+                            zone: current_zone.clone(),
+                            group: group.clone(),
+                            device,
+                            name,
+                            freq_mhz,
+                            band_info: String::new(),
+                        });
                     }
                 }
             }
         }
     }
 
-    let result = IasParseResult {
+    Ok(IasParseResult {
         status: "success".to_string(),
         source_format: "IAS_HTML_Report".to_string(),
         file_path: source_name.to_string(),
         mqtt_topic: ias_mqtt_topic(),
         total_channels: channels.len(),
         channels,
-    };
-
-    // Publish parsed result to MQTT
-    if let Ok(json_payload) = serde_json::to_string_pretty(&result) {
-        publish_to_mqtt(&ias_mqtt_topic(), &json_payload);
-    }
-
-    Ok(result)
+    })
 }
 
 pub fn publish_to_mqtt(topic: &str, payload: &str) {
@@ -169,5 +173,44 @@ pub fn publish_to_mqtt(topic: &str, payload: &str) {
     }
     if acked || connected {
         std::thread::sleep(Duration::from_millis(300));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const REPORT: &str = include_str!("test_data/report.html");
+
+    #[test]
+    fn each_channel_takes_the_zone_heading_above_its_table() {
+        let r = classify_ias_str(REPORT, "report.html").unwrap();
+        assert_eq!(r.total_channels, 168);
+        let mut zones: Vec<&str> = r.channels.iter().map(|c| c.zone.as_str()).collect();
+        zones.dedup();
+        // in document order, each zone once: the parking lot, then Zone 1 … Zone 6
+        assert_eq!(zones.len(), 7, "zones in order: {zones:?}");
+        assert!(zones[0].starts_with("Parking Lot"));
+        assert_eq!(&zones[1..], ["Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6"]);
+        let first_zone1 = r.channels.iter().find(|c| c.zone == "Zone 1").unwrap();
+        assert_eq!(first_zone1.group, "E-Talk / \"Space\" Studio");
+        assert_eq!(first_zone1.name, "ACR2 RF 19");
+        assert_eq!(first_zone1.freq_mhz, 471.385);
+    }
+
+    #[test]
+    fn nothing_is_invented() {
+        let r = classify_ias_str(REPORT, "report.html").unwrap();
+        assert!(r.channels.iter().all(|c| c.band_info.is_empty()));
+        assert!(r.channels.iter().all(|c| c.device != "Generic RF" && !c.name.starts_with("CH_")));
+    }
+
+    #[test]
+    fn an_empty_cell_stays_empty() {
+        let html = r#"<p>Zone: A</p><table class="Assignment"><tr><td></td><td></td><td></td><td><b>500.0</b></td></tr></table>"#;
+        let r = classify_ias_str(html, "x").unwrap();
+        assert_eq!(r.total_channels, 1);
+        let c = &r.channels[0];
+        assert_eq!((c.zone.as_str(), c.group.as_str(), c.device.as_str(), c.name.as_str()), ("A", "", "", ""));
     }
 }

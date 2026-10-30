@@ -7,7 +7,9 @@ use std::path::Path;
 mod ias_importer;
 
 fn main() {
-    let report_path = concat!(env!("CARGO_MANIFEST_DIR"), "/DataMigration/1_IAS/test_data/report.html");
+    // The fixture lives beside this file, in DATATYPE.wireless.IAS/test_data — not under the
+    // DataMigration crate that compiles this runner.
+    let report_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../DATATYPE/DATATYPE.wireless.IAS/test_data/report.html");
     println!("[IAS Test Runner] Testing standalone IAS Importer with file: {}", report_path);
 
     match ias_importer::parse_ias_report(Path::new(report_path)) {

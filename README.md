@@ -22,19 +22,22 @@
 
 ### `ias_importer.rs`
 
-`parse_ias_report(path)` / `parse_ias_report_str(html, source_name)`:
+`classify_ias_str(html, source_name)` parses and has no side effect;
+`parse_ias_report(path)` / `parse_ias_report_str(html, source_name)` call it and then publish.
 
-1. Scans every `<p>` for `Zone:` and keeps the text after it as the zone.
-2. For every `table.Assignment`, takes its first `<th>` as the group, then reads each `<tr>` in
+1. Walks `<p>` and `table.Assignment` together, in document order. A `<p>` containing `Zone:`
+   sets the zone for the tables below it.
+2. For each `table.Assignment`, takes its first `<th>` as the group, then reads each `<tr>` in
    blocks of four `<td>` (IAS prints up to two channel blocks per row): device, name, —,
    frequency (inside `<b>` when present).
 3. Keeps a block whose frequency parses to 100–3000 MHz as an
-   `IasChannel { zone, group, device, name, freq_mhz, band_info }`. An empty device becomes
-   `Generic RF`, an empty name `CH_<n>`, and `band_info` is always `"UHF"`.
+   `IasChannel { zone, group, device, name, freq_mhz, band_info }`. An empty cell stays empty,
+   and `band_info` is empty — an IAS report has no band column.
 
-**The zone is wrong for multi-zone reports.** Step 1 finishes before step 2 starts, so every
-channel gets the *last* zone in the document. On `test_data/report.html` all 168 channels come out
-as `Zone 6` (checked 2026-10-30).
+On `test_data/report.html` that gives 168 channels across the parking-lot zone and Zones 1–6, in
+order (unit test `each_channel_takes_the_zone_heading_above_its_table`). Until 2026-10-30 the
+zone headings were read in a separate pass before the tables, so every channel got the last zone,
+`Zone 6`; `band_info` was the constant `"UHF"` and empty cells became `Generic RF` / `CH_<n>`.
 
 **Every parse publishes.** The `IasParseResult` (status, `source_format: "IAS_HTML_Report"`, file
 path, topic, count, channels) goes out as pretty JSON, QoS 1, **retained**, to
@@ -54,14 +57,13 @@ file in by `#[path]`, and `Cargo.toml` declares the runner as a `[[bin]]`:
 
 ```bash
 cd PODS/POD.THIN/Softapps/MANAGEMENT_AND_UTILITIES/MANAGEMENT.DataMigration
-cargo build --bin test_ias_importer
-cargo run   --bin test_ias_importer      # publishes to the local broker, retained
+cargo test --lib ias                     # the parser on the fixture; publishes nothing
+cargo run  --bin test_ias_importer       # prints a sample — and publishes to the local broker, retained
 ```
 
-Checked 2026-10-30: it builds, and the runner **fails** — it looks for
-`<MANAGEMENT.DataMigration>/DataMigration/1_IAS/test_data/report.html`, which no longer exists;
-the fixture is here in `test_data/`. Pointed at `test_data/report.html` directly, the importer
-returns 168 channels.
+Checked 2026-10-30: `cargo test --lib ias` 3 passed. The runner reads the fixture from
+`../../DATATYPE/DATATYPE.wireless.IAS/test_data/report.html` (it used to look under the
+DataMigration crate, where it no longer is).
 
 ### `IMPORT:file:HTML/Entry.py` (Python)
 
@@ -92,10 +94,9 @@ by path to assert it. Logging comes from `importer_logging` (in `NODE.BareMetal/
   scraper shows as `STATUS = "unavailable"`, which a test checks, rather than as a report with no
   rows (`IMPORT:file:HTML/Entry.py` header).
 - **Keep going on a bad row.** Cells that are not a frequency in 100–3000 MHz are skipped, not
-  fatal (`parse_ias_report_str`).
-- **Where the code falls short of refusal over fabrication:** `band_info` is the constant `"UHF"`
-  whatever the frequency, and empty cells become `Generic RF` / `CH_<n>` — plausible values the
-  report did not contain (`parse_ias_report_str`). The CSV sibling leaves its band empty instead.
+  fatal (`classify_ias_str`).
+- **Do not invent a value.** An empty cell stays empty and `band_info` is empty, since the
+  report carries no band (`classify_ias_str`, test `nothing_is_invented`).
 
 <!-- wiki:smoke -->
 **Smoke test** — ✅ PASS 1/1 since 2026-10-30 12:51 EDT — [results](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)

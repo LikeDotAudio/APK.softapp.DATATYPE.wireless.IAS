@@ -21,6 +21,8 @@
 | `test_ias_importer.rs` | A `[[bin]]` runner of that crate: parses one fixture, prints the first ten channels, exits 1 on failure. |
 | `test_data/report.html` | Fixture: a real IAS report, seven `Zone:` headings, 168 channels. |
 | `IMPORT:file:HTML/Entry.py` | The Python edge — see below. |
+| `SRC/` | The worker crate `apk-worker-wireless-ias`: `ias_importer.rs` (by `#[path]`) behind a job loop on `apk-plugin-runner`, with its `config.ini` (section `[wireless_ias]`). Tested by `cargo test --manifest-path SRC/Cargo.toml`; built as the image `worker-wireless-ias:local`. |
+| `Docker/` | The worker stack: container `Worker-WIRELESS_IAS`, project `workers`, no port. Included by `PODS/POD.workers/Docker/docker-compose.yml`. |
 
 ### `ias_importer.rs`
 
@@ -80,6 +82,21 @@ are documented no-ops: the edge holds nothing between calls. Logging comes from 
 (in `NODE.BareMetal/SRC/Core/`).
 
 ---
+
+### As a worker (`Worker-WIRELESS_IAS`, POD.workers)
+
+The same parser answers jobs on the bus (LOOSE-workers-convert-rest). A client subscribes to
+`APK.audio/System/Protocols/wireless_ias/incoming/result`, then publishes
+`{"job_id": "<yours>", "filename": "report.html", ...}` to `APK.audio/System/Protocols/wireless_ias/outgoing/job`
+with the file as "text". The answer carries the same `job_id`, `ok`, and the parse result of
+`classify_ias_str` under `result`; a malformed job or one over `max_job_bytes` (8 MiB, `SRC/config.ini`) comes
+back `ok: false` with an `error`. Nothing is retained and the worker opens no port. Measured
+2026-10-30: the fixture `test_data/report.html` sent as a job came back `ok: true` with 168 channels.
+
+```bash
+docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build wireless-ias
+cargo test --manifest-path SRC/Cargo.toml        # handle_job on the fixture, the self test
+```
 
 ## 🚀 Usage & Integration
 * **Web Portal Entry**: none of its own; the records are for the Data Migration frames under

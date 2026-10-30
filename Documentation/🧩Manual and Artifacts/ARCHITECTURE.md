@@ -37,3 +37,13 @@ In the Data Migration tab, the *IAS* frame (`WEB.Frontend-Assets/SRC/FrontEnd/Gu
 cd PODS/POD.THIN/Softapps/MANAGEMENT_AND_UTILITIES/MANAGEMENT.DataMigration
 cargo test --lib ias        # 3 tests: zones in order, nothing invented, empty cell stays empty
 ```
+
+## As a worker
+
+`SRC/src/lib.rs` `handle_job` decodes a job (`text` or `content_b64`), refuses one over
+`max_job_bytes` (8 MiB), runs `classify_ias_str` and returns `{job_id, tool, ok, result, error, elapsed_ms}`
+— always, so a caller waiting on a `job_id` is never left waiting. `run_job_agent` feeds it from
+`APK.audio/System/Protocols/wireless_ias/outgoing/job` and answers on `…/incoming/result`, neither
+retained. `apk-plugin-runner` adds the retained `incoming/api` description, the config, the will and
+the self test (`SRC/src/self_test.rs`: a probe file compiled into the binary runs through
+`handle_job`). The pod is `PODS/POD.workers`.

@@ -1,0 +1,46 @@
+# apk-worker-wireless-ias — the IAS report importer as a worker on the bus
+# (LOOSE-workers-convert-rest, after PLAN-3423.01's wireless CSV worker).
+#
+# Owns: the container entry point that answers `outgoing/job` with
+# `incoming/result` by running `ias_importer.rs` (one directory up, at this
+# repository's root) — the same parser the DataMigration crate compiles,
+# pulled in by `#[path]`, not copied.
+#
+# BUILT ON apk-plugin-runner, the crate every THICK plugin links: it publishes
+# the config, the last will, the self-test door and the retained `incoming/api`
+# description; this crate adds only the job loop.
+#
+# ITS OWN WORKSPACE, not a member of DISCOVERY.Engine's: a worker builds its
+# own image, so a broken worker never fails the plugin build and the reverse.
+#
+# CONTRACTS BY THE SAME LEXICAL PATH THE RUNNER USES
+# (`…/NODE.BareMetal/SRC/contracts/rust`), or cargo sees two
+# apkaudio-contracts packages and refuses the build.
+[package]
+name = "apk-worker-wireless-ias"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[lib]
+name = "apk_worker_wireless_ias"
+path = "src/lib.rs"
+
+[dependencies]
+apk-plugin-runner = { path = "../../../../../POD.THICK/DISCOVERY.Engine/SRC/RUNNER" }
+apkaudio-contracts = { path = "../../../../../POD.THICK/NODE.BareMetal/SRC/contracts/rust" }
+base64 = "0.22"
+rumqttc = "0.24"
+scraper = "0.18"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "apk-worker-wireless-ias"
+path = "src/bin/apk-worker-wireless-ias.rs"
+
+# The runner's health probe, compiled from the runner's own source file.
+[[bin]]
+name = "apk-plugin-health"
+path = "../../../../../POD.THICK/DISCOVERY.Engine/SRC/RUNNER/src/bin/apk-plugin-health.rs"

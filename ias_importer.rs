@@ -2,13 +2,15 @@
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 //! Standalone IAS Importer & Test Runner written in Rust.
 //! Parses IAS HTML reports (e.g., report.html), serializes to structured data,
-//! and publishes the parsed channel matrix to the MQTT bus.
+//! and returns the channel matrix. It does not publish: the data-migration daemon
+//! publishes the result on the broker it was started with (LOOSE-datatype-datatype-wireless),
+//! so a test run never overwrites live retained state.
 
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use apkaudio_contracts::topics::{self, MQTT_DEFAULT_PORT, MQTT_LOOPBACK_HOST};
+use apkaudio_contracts::topics;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IasChannel {
@@ -27,6 +29,8 @@ pub struct IasParseResult {
     pub file_path: String,
     pub mqtt_topic: String,
     pub total_channels: usize,
+    /// Channel blocks the report carried but that had no usable frequency.
+    pub skipped_rows: usize,
     pub channels: Vec<IasChannel>,
 }
 
@@ -47,20 +51,16 @@ pub fn parse_ias_report(file_path: impl AsRef<Path>) -> Result<IasParseResult, S
     parse_ias_report_str(&content, &path.to_string_lossy())
 }
 
-/// Parse raw IAS HTML report content and publish the result, retained.
+/// Parse raw IAS HTML report content. No side effect (see `classify_ias_str`).
 pub fn parse_ias_report_str(content: &str, source_name: &str) -> Result<IasParseResult, String> {
-    let result = classify_ias_str(content, source_name)?;
-    if let Ok(json_payload) = serde_json::to_string_pretty(&result) {
-        publish_to_mqtt(&ias_mqtt_topic(), &json_payload);
-    }
-    Ok(result)
+    classify_ias_str(content, source_name)
 }
 
 fn text_of(el: scraper::ElementRef<'_>) -> String {
     el.text().collect::<Vec<_>>().join("").trim().to_string()
 }
 
-/// Parse raw IAS HTML report content. No side effect — `parse_ias_report_str` publishes.
+/// Parse raw IAS HTML report content. No side effect.
 ///
 /// The report is a sequence of `<p>Zone: …</p>` headings, each followed by the
 /// `table.Assignment` blocks of that zone. They are walked in ONE pass, in document
@@ -83,6 +83,7 @@ pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResu
     let b_selector = sel("b")?;
 
     let mut current_zone = String::new();
+    let mut skipped_rows = 0usize;
 
     for el in document.select(&walk_selector) {
         if el.value().name() == "p" {
@@ -108,8 +109,12 @@ pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResu
                     Some(b_elem) => text_of(b_elem),
                     None => text_of(chunk[3]),
                 };
-                if let Ok(freq_mhz) = freq_text.parse::<f64>() {
-                    if freq_mhz > 100.0 && freq_mhz < 3000.0 {
+                let usable = freq_text.parse::<f64>().ok().filter(|f| *f > 100.0 && *f < 3000.0);
+                if usable.is_none() && !(device.is_empty() && name.is_empty() && freq_text.is_empty()) {
+                    skipped_rows += 1;
+                }
+                if let Some(freq_mhz) = usable {
+                    {
                         channels.push(IasChannel {
                             zone: current_zone.clone(),
                             group: group.clone(),
@@ -125,55 +130,20 @@ pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResu
     }
 
     Ok(IasParseResult {
-        status: "success".to_string(),
+        status: status_for(channels.len()),
         source_format: "IAS_HTML_Report".to_string(),
         file_path: source_name.to_string(),
         mqtt_topic: ias_mqtt_topic(),
         total_channels: channels.len(),
+        skipped_rows,
         channels,
     })
 }
 
-pub fn publish_to_mqtt(topic: &str, payload: &str) {
-    use rumqttc::{Client, MqttOptions, Event, Packet, QoS};
-    use std::time::Duration;
-
-    let mut mqttoptions = MqttOptions::new("apkaudio-ias-importer", MQTT_LOOPBACK_HOST, MQTT_DEFAULT_PORT);
-    mqttoptions.set_keep_alive(Duration::from_secs(10));
-    if let Some((username, password)) = apkaudio_contracts::broker_auth::credentials() {
-        mqttoptions.set_credentials(username, password);
-    }
-    // Max payload is ~35KB, set max_packet_size to 5MB
-    mqttoptions.set_max_packet_size(5_000_000, 5_000_000);
-
-    let (client, mut connection) = Client::new(mqttoptions, 10);
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    let mut connected = false;
-    let mut acked = false;
-
-    for notification in connection.iter() {
-        if let Ok(event) = notification {
-            match event {
-                Event::Incoming(Packet::ConnAck(_)) => {
-                    connected = true;
-                    let _ = client.publish(topic, QoS::AtLeastOnce, true, payload.as_bytes());
-                    println!("[IAS MQTT PUBLISHER] Connected & Published payload to '{}'", topic);
-                }
-                Event::Incoming(Packet::PubAck(_)) => {
-                    println!("[IAS MQTT PUBLISHER] Broker Acked payload on '{}'", topic);
-                    acked = true;
-                    break;
-                }
-                _ => {}
-            }
-        }
-        if std::time::Instant::now() > deadline {
-            break;
-        }
-    }
-    if acked || connected {
-        std::thread::sleep(Duration::from_millis(300));
-    }
+/// "success" only when the report yielded channels; a parse that found none is
+/// "empty", never a success the panel would draw as an imported, blank table.
+fn status_for(channels: usize) -> String {
+    if channels > 0 { "success" } else { "empty" }.to_string()
 }
 
 #[cfg(test)]
@@ -203,6 +173,15 @@ mod tests {
         let r = classify_ias_str(REPORT, "report.html").unwrap();
         assert!(r.channels.iter().all(|c| c.band_info.is_empty()));
         assert!(r.channels.iter().all(|c| c.device != "Generic RF" && !c.name.starts_with("CH_")));
+    }
+
+    #[test]
+    fn no_channels_is_empty_not_success_and_rejects_are_counted() {
+        let html = r#"<p>Zone: A</p><table class="Assignment"><tr><td>Tx</td><td>Mic</td><td></td><td><b>n/a</b></td></tr></table>"#;
+        let r = classify_ias_str(html, "x").unwrap();
+        assert_eq!((r.status.as_str(), r.total_channels, r.skipped_rows), ("empty", 0, 1));
+        let ok = classify_ias_str(REPORT, "report.html").unwrap();
+        assert_eq!(ok.status, "success");
     }
 
     #[test]

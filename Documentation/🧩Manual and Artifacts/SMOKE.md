@@ -12,4 +12,4 @@ Is `DATATYPE.wireless.IAS` deployed? Written by `.apk.scripts/smoke.py` from the
 
 Re-run: `python3 .apk.scripts/smoke.py PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS`
 
-<!-- smoke:sig 974ef99acf9d since 2026-10-30 12:51 EDT -->
+<!-- smoke:sig b2ba3eb78c73 since 2026-10-30 12:51 EDT -->

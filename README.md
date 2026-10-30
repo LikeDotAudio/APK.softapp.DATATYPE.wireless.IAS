@@ -74,7 +74,10 @@ DataMigration crate, where it no longer is).
 (Rust: `PODS/POD.THICK/NODE.BareMetal/SRC/Core/CORE:engine:RUST/PARSER/html_scraper.rs`), and raises
 if that module is not importable. `STATUS` is `"live"` or `"unavailable"` accordingly, and
 `PODS/POD.THICK/NODE.BareMetal/SRC/Core/TEST:runner:PYTHON/test_handler_status.py` loads this file
-by path to assert it. Logging comes from `importer_logging` (in `NODE.BareMetal/SRC/Core/`).
+by path to assert it. `run_tests()` scrapes a one-table report through that scraper and returns
+`False` when it is missing or answers wrongly — never `True` for having run nothing. `start`/`stop`
+are documented no-ops: the edge holds nothing between calls. Logging comes from `importer_logging`
+(in `NODE.BareMetal/SRC/Core/`).
 
 ---
 

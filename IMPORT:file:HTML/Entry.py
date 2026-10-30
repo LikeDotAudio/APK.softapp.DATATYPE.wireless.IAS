@@ -46,13 +46,43 @@ def convert_ias_html_to_markers(html_content):
 Marker_convert_IAShtml_report_to_csv = convert_ias_html_to_markers
 
 
-# Inline comment: Logic for start
-def start(): pass
-# Inline comment: Logic for stop
-def stop(): pass
-# Inline comment: Logic for status
-def status(): return STATUS
-# Inline comment: Logic for run_tests
-def run_tests(): return True
+# Lifecycle. The importer holds no thread, socket or file between calls, so there is
+# nothing to start or stop: these exist because the importer interface names them,
+# and they say so rather than pretend to do something.
+def start():
+    """No-op by design: the importer is stateless between calls."""
+    return None
+
+
+def stop():
+    """No-op by design: the importer is stateless between calls."""
+    return None
+
+
+def status():
+    return STATUS
+
+
+def run_tests():
+    """Scrape a one-table report through the Rust scraper and check what comes back.
+
+    False when the scraper is unavailable or answers wrongly — never True for
+    having run nothing. (It used to return True unconditionally.)"""
+    if not rust_scrape_tables:
+        return False
+    html = (
+        "<html><body><table>"
+        "<tr><th>Name</th><th>Frequency</th></tr>"
+        "<tr><td>Ch 1</td><td>470.125</td></tr>"
+        "</table></body></html>"
+    )
+    try:
+        headers, tables = convert_ias_html_to_markers(html)
+    except Exception as e:
+        matrix_log("ui", "importer", "run_tests", f"❌ IAS HTML scraper self-test raised: {e}", "ERROR")
+        return False
+    tables = [list(t) for t in tables]
+    return headers == MARKER_HEADERS and tables == [[{"Name": "Ch 1", "Frequency": "470.125"}]]
+
 
 __all__ = ["convert_ias_html_to_markers", "Marker_convert_IAShtml_report_to_csv", "MARKER_HEADERS", "STATUS", "start", "stop", "status", "run_tests"]

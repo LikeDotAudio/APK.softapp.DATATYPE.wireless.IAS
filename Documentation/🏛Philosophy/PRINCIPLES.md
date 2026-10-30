@@ -1,0 +1,15 @@
+# Principles — DATATYPE.wireless.IAS
+
+The rules the IAS report importer keeps, each with the code that keeps it (in `ias_importer.rs` unless named). Ecosystem rules are cited, not copied: [Refusal over fabrication](../../../../../../../Documentation/%F0%9F%8F%9BPhilosophy/Doctrine/readme.Refusal%20over%20fabrication.md).
+
+← [Wiki home](../README.md)
+
+| Principle | Kept by | Where it breaks |
+|---|---|---|
+| **Read the report in the order it is written.** A zone heading applies to the tables under it. | one document-order walk over `p, table.Assignment` (line 79); test `each_channel_takes_the_zone_heading_above_its_table` (line 186) | — (until 2026-10-30 every channel got the last zone) |
+| **Do not invent a value.** An empty cell stays empty; `band_info` is empty because the report has no band column. | `band_info: String::new()` (line 119); test `nothing_is_invented` (line 202) | — (was `"UHF"`, `Generic RF`, `CH_<n>`) |
+| **Parsing has no side effect; publishing is a separate step.** | `classify_ias_str` (line 74) vs `parse_ias_report_str` (line 51) | — |
+| **Topics come from the contract.** | `ias_mqtt_topic()` (line 36) → `apkaudio_contracts::topics::data_migration` | — |
+| **The bus is the API.** The result is published retained; any tab opened later sees the last import. | `publish_to_mqtt` (line 137) | — |
+| **Keep going on a bad cell.** A block whose frequency is not 100–3000 MHz is skipped. | the guard at line 112; `chunks_exact(4)` (line 103) drops a partial block | Skipped blocks are not counted or reported |
+| **A stub says so in a constant.** The Python edge reports `STATUS = "unavailable"` without the Rust scraper and raises rather than parse HTML itself. | `IMPORT:file:HTML/Entry.py` (lines 35, 43); asserted by `NODE.BareMetal/SRC/Core/TEST:runner:PYTHON/test_handler_status.py` | `run_tests()` returns `True` unconditionally, and `start`/`stop` are bare `pass` |

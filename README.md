@@ -1,6 +1,8 @@
 # DATATYPE.wireless.IAS
 
 > 📑 **IAS report importer** — reads an IAS (Intermodulation Analysis System) HTML frequency-coordination report, turns its assignment tables into channel records and publishes them on the bus.
+>
+> 📚 **Wiki:** [Documentation/README.md](Documentation/README.md) — principles, architecture, delivery.
 
 ---
 

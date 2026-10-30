@@ -96,3 +96,7 @@ by path to assert it. Logging comes from `importer_logging` (in `NODE.BareMetal/
 - **Where the code falls short of refusal over fabrication:** `band_info` is the constant `"UHF"`
   whatever the frequency, and empty cells become `Generic RF` / `CH_<n>` — plausible values the
   report did not contain (`parse_ias_report_str`). The CSV sibling leaves its band empty instead.
+
+<!-- wiki:smoke -->
+**Smoke test** — ✅ PASS 1/1 since 2026-10-30 12:51 EDT — [results](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)
+<!-- /wiki:smoke -->

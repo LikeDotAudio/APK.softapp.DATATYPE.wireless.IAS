@@ -28,7 +28,7 @@ In the Data Migration tab, the *IAS* frame (`WEB.Frontend-Assets/SRC/FrontEnd/Gu
 | `SRC/importer/` | the parser crate `apkaudio-wireless-ias` and its unit tests (no publisher), `tests/fixtures.rs` over `test_data/report.html`; MANAGEMENT.DataMigration depends on it by git rev |
 | `SRC/check.sh` | the one local check: `cargo test --workspace --locked` (+ pytest for the Python edge) |
 | `test_data/report.html` | a real IAS report: seven zone headings, 168 channels |
-| `IMPORT:file:HTML/Entry.py` | Python edge: `convert_ias_html_to_markers` over `oaRustCore.html_scraper.scrape_tables` (a different Rust scraper) |
+| `IMPORT.file.HTML/Entry.py` | Python edge: `convert_ias_html_to_markers` over `oaRustCore.html_scraper.scrape_tables` (a different Rust scraper) |
 
 ## Testing
 

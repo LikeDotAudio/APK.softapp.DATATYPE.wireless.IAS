@@ -20,7 +20,7 @@
 | `SRC/importer/` | The parser crate `apkaudio-wireless-ias` and `tests/fixtures.rs` (the fixture, 168 channels). Linked by the worker by path, by MANAGEMENT.DataMigration by git rev. |
 | `SRC/check.sh` | Every check here in one command: `cargo test --workspace --locked` in `SRC/` (and pytest for the Python edge). |
 | `test_data/report.html` | Fixture: a real IAS report, seven `Zone:` headings, 168 channels. |
-| `IMPORT:file:HTML/Entry.py` | The Python edge — see below. |
+| `IMPORT.file.HTML/Entry.py` | The Python edge — see below. |
 | `SRC/` | The worker crate `apk-worker-wireless-ias`: the parser crate `importer/` behind the runner's job loop (`apk_plugin_runner::jobs::JobWorker`) and the wireless kernel's job envelope, with its `config.ini` (section `[wireless_ias]`). Tested by `bash SRC/check.sh`; built as the image `worker-wireless-ias:local`. |
 | `Docker/` | The worker stack: container `Worker-WIRELESS_IAS`, project `workers`, no port. Included by `PODS/POD.workers/Docker/docker-compose.yml`. |
 
@@ -66,13 +66,13 @@ its path (168 channels); it was the `test_ias_importer` `[[bin]]` DataMigration 
 repository's file until the 2026-10-30 audit. The 100–3000 MHz guard and the status word are the
 wireless kernel's (`apkaudio-wireless-kernel`, DATATYPE.wireless.CSV/SRC/kernel, by git rev).
 
-### `IMPORT:file:HTML/Entry.py` (Python)
+### `IMPORT.file.HTML/Entry.py` (Python)
 
 `convert_ias_html_to_markers(html)` returns the header row
 `ZONE, GROUP, DEVICE, NAME, FREQ_MHZ, PEAK` and the rows from `oaRustCore.html_scraper.scrape_tables`
-(Rust: `PODS/POD.THICK/NODE.BareMetal/SRC/Core/CORE:engine:RUST/PARSER/html_scraper.rs`), and raises
+(Rust: `PODS/POD.THICK/NODE.BareMetal/SRC/Core/CORE.engine.RUST/PARSER/html_scraper.rs`), and raises
 if that module is not importable. `STATUS` is `"live"` or `"unavailable"` accordingly, and
-`PODS/POD.THICK/NODE.BareMetal/SRC/Core/TEST:runner:PYTHON/test_handler_status.py` loads this file
+`PODS/POD.THICK/NODE.BareMetal/SRC/Core/TEST.runner.PYTHON/test_handler_status.py` loads this file
 by path to assert it. `run_tests()` scrapes a one-table report through that scraper and returns
 `False` when it is missing or answers wrongly — never `True` for having run nothing. `start`/`stop`
 are documented no-ops: the edge holds nothing between calls. `MARKER_HEADERS`, the lifecycle and logging come from
@@ -112,7 +112,7 @@ bash SRC/check.sh                                # handle_job on the fixture, th
   job on `wireless_ias/incoming/result`, unretained (`SRC/src/lib.rs`).
 - **One parser, no silent fallback.** The Python edge refuses to parse HTML itself; a missing Rust
   scraper shows as `STATUS = "unavailable"`, which a test checks, rather than as a report with no
-  rows (`IMPORT:file:HTML/Entry.py` header).
+  rows (`IMPORT.file.HTML/Entry.py` header).
 - **Keep going on a bad row.** Cells that are not a frequency in 100–3000 MHz are skipped, not
   fatal (`classify_ias_str`).
 - **Do not invent a value.** An empty cell stays empty and `band_info` is empty, since the

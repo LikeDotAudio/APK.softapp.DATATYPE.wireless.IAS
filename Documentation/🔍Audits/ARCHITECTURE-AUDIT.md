@@ -4,7 +4,7 @@ Audited against the APK.audio multi-repo architecture standard: coupling, bounda
 ← [Audits](INDEX.md) · Improvements: [🛣Roadmap/IMPROVEMENTS.md](../%F0%9F%9B%A3Roadmap/IMPROVEMENTS.md)
 
 ## Bounded context
-Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordination report → channel records; shipped as the bus worker `Worker-WIRELESS_IAS` (job in, result out, no port) and compiled into DataMigration. Rust (parser `ias_importer.rs` + worker crate `SRC/`), a thin Python edge `IMPORT:file:HTML/Entry.py`; ~620 lines. Sampled: all of it — `Docker/Dockerfile`, `Docker/docker-compose.yml`, `SRC/Cargo.toml`, `SRC/config.ini`, `SRC/src/lib.rs`, `self_test.rs`, the bin, `ias_importer.rs`, `Entry.py`, `display.json`; compared the job loop with sibling DATATYPE.wireless.CSV.
+Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordination report → channel records; shipped as the bus worker `Worker-WIRELESS_IAS` (job in, result out, no port) and compiled into DataMigration. Rust (parser `ias_importer.rs` + worker crate `SRC/`), a thin Python edge `IMPORT.file.HTML/Entry.py`; ~620 lines. Sampled: all of it — `Docker/Dockerfile`, `Docker/docker-compose.yml`, `SRC/Cargo.toml`, `SRC/config.ini`, `SRC/src/lib.rs`, `self_test.rs`, the bin, `ias_importer.rs`, `Entry.py`, `display.json`; compared the job loop with sibling DATATYPE.wireless.CSV.
 
 ## Context map
 | Talks to | How (topic / endpoint / file / import) | Relationship |
@@ -13,7 +13,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 | APK.plugin.SDK (`apk-plugin-runner`, `apkaudio-contracts`) | Cargo `tag = "sdk-v0.7"`, pinned in Cargo.lock; job loop `apk_plugin_runner::jobs::JobWorker` | Conformist, by version |
 | DATATYPE.wireless.CSV `SRC/kernel` (`apkaudio-wireless-kernel`) | Cargo git rev (band rule, status word, job envelope) | Shared kernel, one-way |
 | MANAGEMENT.DataMigration | depends on `SRC/importer` (`apkaudio-wireless-ias`) by git rev | Supplier (crate) |
-| `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python) | `IMPORT:file:HTML/Entry.py` imports it; pinned by rev in `IMPORT:file:HTML/requirements.txt` | Supplier (package) |
+| `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python) | `IMPORT.file.HTML/Entry.py` imports it; pinned by rev in `IMPORT.file.HTML/requirements.txt` | Supplier (package) |
 | oaRustCore (optional native wheel) | the Python edge's engine; absent → `STATUS = "unavailable"` | Customer of a native module |
 | POD.workers aggregator | `include:`s `Docker/docker-compose.yml`; project `workers` | Pod aggregator (house pattern) |
 

@@ -10,4 +10,4 @@ set -euo pipefail
 cd "$(dirname "$0")"
 cargo test --workspace --locked
 cd ..
-python3 -m pytest -q "IMPORT:file:HTML/Tests" -p no:cacheprovider
+python3 -m pytest -q "IMPORT.file.HTML/Tests" -p no:cacheprovider

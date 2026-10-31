@@ -47,8 +47,8 @@ base64 = "0.22"
 name = "apk-worker-wireless-ias"
 path = "src/bin/apk-worker-wireless-ias.rs"
 
-# The runner's health probe, compiled from the runner's own source file —
-# until the runner exposes it as a function (handoff to DISCOVERY.Engine).
+# The compose healthcheck: one line over `apk_plugin_runner::health_check()`,
+# the runner's probe as a function (no other repository's file compiled here).
 [[bin]]
 name = "apk-plugin-health"
-path = "../../../../../POD.THICK/DISCOVERY.Engine/SRC/RUNNER/src/bin/apk-plugin-health.rs"
+path = "src/bin/apk-plugin-health.rs"

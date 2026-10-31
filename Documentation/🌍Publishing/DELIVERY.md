@@ -28,4 +28,4 @@ Remote: `https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.IAS.git` 
 - **Versioned result + shape test** — answers carry `schema: 1`; `the_result_shape_is_pinned` holds the result and channel keys.
 - **One local check** — `SRC/check.sh` (`cargo test --workspace --locked` + pytest); the root CI verifies nothing on purpose.
 - **Python edge: shared header row + lifecycle, no BareMetal import** — `IMPORT:file:HTML/Entry.py` takes `MARKER_HEADERS`, `Lifecycle` and `log` from `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python, pinned by rev in `requirements.txt`) instead of its own copy and NODE.BareMetal's `importer_logging`; `run_tests()` is False unless live and the scrape answers. `Tests/` added (5 passed).
-
+- **Health probe from the runner, not its source file** — `SRC/src/bin/apk-plugin-health.rs` is one line over `apk_plugin_runner::health_check()` (W02 foundation); the `[[bin]]` that compiled DISCOVERY.Engine's `RUNNER/src/bin/apk-plugin-health.rs` by path is gone. Verified by `bash SRC/check.sh` and `docker build`.

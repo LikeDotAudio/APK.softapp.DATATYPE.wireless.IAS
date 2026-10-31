@@ -20,7 +20,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 ## Scorecard
 | Category | Score (0–3) | Finding |
 |---|---|---|
-| Coupling & Cohesion | 2 | SDK by tag, parser a crate with one owner, no `#[path]` from another repo; the health bin still compiles the runner's source file (waiting on the runner) and the image context is the repo root until an SDK tag carries `jobs` |
+| Coupling & Cohesion | 2 | SDK by tag, parser a crate with one owner, no `#[path]` from another repo; the image context is the repo root until an SDK tag carries `jobs` |
 | Boundary Integrity | 3 | Pure parser; MQTT only through the runner's `JobWorker`; versioned answer with a pinned shape |
 | Duplication Control | 3 | Job loop is the runner's, envelope and band rule the kernel's; MARKER_HEADERS/lifecycle shared via apk_wireless_import |
 | Testing & Contracts | 3 | `SRC/check.sh`: worker (incl. self test, topics, shape), parser + fixture tests, the Python edge's Tests/; DataMigration's frame-header contract test |
@@ -28,8 +28,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 Score key: 3 meets the standard · 2 minor gaps · 1 significant gaps · 0 absent / violated.
 
 ## Findings
-1. **Health probe compiled from the runner's source file.** `SRC/Cargo.toml` `[[bin]] apk-plugin-health`. Waiting on DISCOVERY.Engine (handoff filed: `apk_plugin_runner::health_check()`).
-2. **Image builds from the monorepo root.** `Docker/Dockerfile` COPYs contracts, the runner and the CSV kernel and patches them in with `--config`, because `sdk-v0.5` predates `apk_plugin_runner::jobs` and the kernel rev is not pushed. Needs owner: publish the next SDK tag and push DATATYPE.wireless.CSV.
-3. **Good — no port, hardened container.** `cap_drop: [ALL]`, `read_only`, `no-new-privileges`, non-root uid 10001, runner health probe.
-4. **Good — topics from the contract.** `job_and_result_topics_are_this_modules` asserts the job/result topic strings.
-5. **Good — pure core, thin shell.** `handle_job` is three lines over the kernel; the parser publishes nothing.
+1. **Image builds from the monorepo root.** `Docker/Dockerfile` COPYs contracts, the runner and the CSV kernel and patches them in with `--config`, because `sdk-v0.5` predates `apk_plugin_runner::jobs` and the kernel rev is not pushed. Needs owner: publish the next SDK tag and push DATATYPE.wireless.CSV.
+2. **Good — no port, hardened container.** `cap_drop: [ALL]`, `read_only`, `no-new-privileges`, non-root uid 10001, runner health probe.
+3. **Good — topics from the contract.** `job_and_result_topics_are_this_modules` asserts the job/result topic strings.
+4. **Good — pure core, thin shell.** `handle_job` is three lines over the kernel; the parser publishes nothing.

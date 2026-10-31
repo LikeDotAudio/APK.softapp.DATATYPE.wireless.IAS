@@ -13,6 +13,6 @@ The importer ships compiled into the orchestrator, and as a worker image of its 
 
 Remote: `https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.IAS.git` (no workflow of its own).
 
-**Tested:** by hand — `cargo test --lib ias` in MANAGEMENT.DataMigration (3 passed 2026-10-30); `test_handler_status.py` for the Python edge's `STATUS`. `.apk.scripts/smoke.py` checks only that HEAD is pushed ([SMOKE](../%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)).
+**Tested:** by hand — `cargo test --lib ias` in MANAGEMENT.DataMigration (4 passed 2026-10-30); `test_handler_status.py` for the Python edge's `STATUS`. `.apk.scripts/smoke.py` checks only that HEAD is pushed ([SMOKE](../%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)).
 
-**Not automated:** no CI runs the tests; the Node-BareMetal rebuild is by hand; `cargo run --bin test_ias_importer` publishes retained to the live broker.
+**Not automated:** no CI runs the tests; the Node-BareMetal rebuild is by hand. (`cargo run --bin test_ias_importer` only prints: the importer publishes nothing.)

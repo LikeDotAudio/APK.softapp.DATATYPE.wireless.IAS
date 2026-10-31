@@ -1,6 +1,6 @@
 # DATATYPE.wireless.IAS
 
-> 📑 **IAS report importer** — reads an IAS (Intermodulation Analysis System) HTML frequency-coordination report, turns its assignment tables into channel records and publishes them on the bus.
+> 📑 **IAS report importer** — reads an IAS (Intermodulation Analysis System) HTML frequency-coordination report, turns its assignment tables into channel records. It publishes nothing itself: on the bus, the records travel as the `wireless_ias` worker's reply to a job.
 >
 > 📚 **Wiki:** [Documentation/README.md](Documentation/README.md) — principles, architecture, delivery.
 
@@ -9,7 +9,7 @@
 ## 🧩 Architectural Role
 * **Family**: DATATYPE — an importer for somebody else's file format
 * **Category**: Wireless / RF coordination reports — source `1_IAS` of the four DataMigration importers (IAS, Soundbase, Wireless Workbench, CSV)
-* **Pipeline Stage**: Data Migration — the record lands on `APK.audio/System/DataMigration/IAS/ImportedData`
+* **Pipeline Stage**: Data Migration — the records come back on `APK.audio/System/Protocols/wireless_ias/incoming/result`, unretained, as the answer to a job
 
 ---
 
@@ -27,7 +27,7 @@
 ### `ias_importer.rs`
 
 `classify_ias_str(html, source_name)` parses and has no side effect;
-`parse_ias_report(path)` / `parse_ias_report_str(html, source_name)` call it and then publish.
+`parse_ias_report(path)` reads a file and `parse_ias_report_str(html, source_name)` wraps it — neither publishes.
 
 1. Walks `<p>` and `table.Assignment` together, in document order. A `<p>` containing `Zone:`
    sets the zone for the tables below it.
@@ -43,16 +43,16 @@ order (unit test `each_channel_takes_the_zone_heading_above_its_table`). Until 2
 zone headings were read in a separate pass before the tables, so every channel got the last zone,
 `Zone 6`; `band_info` was the constant `"UHF"` and empty cells became `Generic RF` / `CH_<n>`.
 
-**Every parse publishes.** The `IasParseResult` (status, `source_format: "IAS_HTML_Report"`, file
-path, topic, count, channels) goes out as pretty JSON, QoS 1, **retained**, to
-`APK.audio/System/DataMigration/IAS/ImportedData` (built by
-`apkaudio_contracts::topics::data_migration("IAS", "ImportedData")`) on the loopback broker, with
-credentials from `apkaudio_contracts::broker_auth` when set and a 5 MB packet limit. It waits up
-to 5 s for CONNACK and PUBACK; no broker is not an error.
+**No parse publishes** (since LOOSE-datatype-datatype-wireless). The functions return an
+`IasParseResult` (status, `source_format: "IAS_HTML_Report"`, file path, `mqtt_topic`, count,
+skipped rows, channels) and open no broker connection, so a test run never overwrites live state.
+`mqtt_topic` still names `APK.audio/System/DataMigration/IAS/ImportedData` (from
+`apkaudio_contracts::topics::data_migration`), but nothing publishes there any more.
 
-Who calls it: `PODS/POD.THICK/NODE.BareMetal/SRC/Core/ORCHESTRATOR:hunter:VISA/src/services/data_migration.rs`
-subscribes to `APK.audio/System/DataMigration/+/FilePath` and hands an IAS payload to
-`oaRustCore::data_migration::ias_importer`.
+Who calls it: the worker below (`SRC/src/lib.rs` `handle_job` → `classify_ias_str`); the Data
+Migration *IAS* frame posts the file to it as a job. The orchestrator's `DataMigration/+/FilePath`
+inbox that used to call `parse_ias_report_str` and publish the result retained was retired
+(NODE.BareMetal ed053f0, LOOSE-datamigration-frames-to-workers).
 
 ### Build and test
 
@@ -62,10 +62,10 @@ file in by `#[path]`, and `Cargo.toml` declares the runner as a `[[bin]]`:
 ```bash
 cd PODS/POD.THIN/Softapps/MANAGEMENT_AND_UTILITIES/MANAGEMENT.DataMigration
 cargo test --lib ias                     # the parser on the fixture; publishes nothing
-cargo run  --bin test_ias_importer       # prints a sample — and publishes to the local broker, retained
+cargo run  --bin test_ias_importer       # prints a sample; publishes nothing
 ```
 
-Checked 2026-10-30: `cargo test --lib ias` 3 passed. The runner reads the fixture from
+Checked 2026-10-30: `cargo test --lib ias` 4 passed. The runner reads the fixture from
 `../../DATATYPE/DATATYPE.wireless.IAS/test_data/report.html` (it used to look under the
 DataMigration crate, where it no longer is).
 
@@ -109,8 +109,8 @@ cargo test --manifest-path SRC/Cargo.toml        # handle_job on the fixture, th
 
 ## 🏛 Philosophy
 
-- **The bus is the API.** The importer's output is a retained message on a topic built from the
-  contract crate (`ias_importer.rs`, `ias_mqtt_topic()` and `publish_to_mqtt()`).
+- **The bus is the API, through the worker.** The parser publishes nothing; the worker answers a
+  job on `wireless_ias/incoming/result`, unretained (`SRC/src/lib.rs`).
 - **Topics come from the contract, never typed out** (comment above `ias_mqtt_topic()`).
 - **One parser, no silent fallback.** The Python edge refuses to parse HTML itself; a missing Rust
   scraper shows as `STATUS = "unavailable"`, which a test checks, rather than as a report with no

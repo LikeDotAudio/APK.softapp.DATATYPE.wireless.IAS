@@ -2,8 +2,8 @@
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 //! Standalone IAS Importer & Test Runner written in Rust.
 //! Parses IAS HTML reports (e.g., report.html), serializes to structured data,
-//! and returns the channel matrix. It does not publish: the data-migration daemon
-//! publishes the result on the broker it was started with (LOOSE-datatype-datatype-wireless),
+//! and returns the channel matrix. It does not publish: the wireless_ias worker (`SRC/src/lib.rs`)
+//! answers each job with the result (LOOSE-datatype-datatype-wireless, LOOSE-datamigration-frames-to-workers),
 //! so a test run never overwrites live retained state.
 
 use scraper::{Html, Selector};

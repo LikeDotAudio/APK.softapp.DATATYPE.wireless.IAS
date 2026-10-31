@@ -2,7 +2,7 @@
   "name": "Datatype Wireless Ias",
   "category": "DATATYPE",
   "icon": "\ud83d\udcd1",
-  "description": "IAS HTML frequency-coordination report importer: reads the assignment tables into channel records and publishes them on APK.audio/System/DataMigration/IAS/ImportedData.",
+  "description": "IAS HTML frequency-coordination report importer: reads the assignment tables into channel records and answers each job posted to APK.audio/System/Protocols/wireless_ias/outgoing/job on .../wireless_ias/incoming/result.",
   "entry": "ias_importer.rs",
   "tech": "rust"
 }

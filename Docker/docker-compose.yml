@@ -48,6 +48,10 @@ services:
       APK_MQTT_PASSWORD: ${APK_MQTT_PASSWORD:-}
       APK_NODE: ${APK_NODE:-}
       APK_IMAGE_REV: ${APK_IMAGE_REV:-unstamped}
+      # THE POD incoming/api reports (PLAN-3430.01): this image builds its SRC/
+      # at /src/SRC, a path with no POD. folder for the runner to read, so it
+      # said pod: null. It runs in POD.workers' aggregator; say so.
+      APK_POD: POD.workers
     networks: [default, bus]
     healthcheck:
       # The runner's probe: the timestamp its tick writes into /tmp. The job

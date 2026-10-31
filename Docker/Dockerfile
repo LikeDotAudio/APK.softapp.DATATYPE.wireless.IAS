@@ -1,43 +1,34 @@
+# syntax=docker/dockerfile:1
 # Worker-WIRELESS_IAS — the IAS report importer as a worker on the bus (LOOSE-workers-convert-rest).
 #   docker compose -f 'PODS/POD.workers/Docker/docker-compose.yml' up -d --build
-#   docker build -f 'PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS/Docker/Dockerfile' -t worker-wireless-ias:local .
+#   APK_DEPS_TOKEN=$(gh auth token) docker compose -f Docker/docker-compose.yml build   # BuildKit (secret)
 #
-# ⚠️ THE BUILD CONTEXT IS THE REPO ROOT (`context: ../../../../../..` in the
-#    compose file beside this one). The crate names apkaudio-contracts and
-#    apk-plugin-runner from APK.plugin.SDK by tag (sdk-v0.5) and the wireless
-#    kernel from DATATYPE.wireless.CSV by rev; the `--config patch…` entries
-#    below point all three at the checkout's copies, so `--locked` holds and
-#    nothing is fetched for them. The context can shrink to this repository once
-#    a published SDK tag carries `apk_plugin_runner::jobs` and the kernel's rev
-#    is pushed (both the owner's).
-#    Every COPY source below is a REAL repo-root path (PODS/README.md rule 1).
-#    Same recipe as DATATYPE.wireless.CSV/Docker/Dockerfile.
+# THE BUILD CONTEXT IS THIS REPOSITORY'S `SRC/` (`context: ../SRC` in the
+#    compose file beside this one) and nothing else. Runner and contracts come
+#    from the public APK.plugin.SDK by tag, the wireless kernel from
+#    DATATYPE.wireless.CSV by rev — every one a git source pinned in Cargo.lock,
+#    so `--locked` builds exactly what `cargo test` passed in a standalone clone.
+#
+# PRIVATE SIBLING: DATATYPE.wireless.CSV (the kernel) is a private repository.
+#    The token arrives as a BuildKit SECRET, never a build arg, so it is in no
+#    layer and no image history — the APK_DEPS_TOKEN pattern PLUGIN.SQL uses.
+#    Compose: `build: { secrets: [apk_deps_token] }` + top-level
+#    `secrets: { apk_deps_token: { environment: APK_DEPS_TOKEN } }`.
+#    Without it the kernel fetch fails with "failed to authenticate".
 
 # ---------- build ----------
 FROM rust:1.94-bookworm AS build
 WORKDIR /src
 ENV CARGO_TARGET_DIR=/src/target
-COPY rust-toolchain.toml ./
+COPY . ./SRC
 
-# THE DESTINATION MIRRORS THE CHECKOUT, so relative path dependencies resolve
-# here as they do on disk. NODE.BareMetal/SRC/contracts is a SYMLINK to
-# <repo>/contracts in a checkout; the two real directories land where it names.
-COPY ["contracts/rust",   "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust"]
-COPY ["contracts/tokens", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/tokens"]
-# The runner, and the workspace manifest it inherits `edition` from.
-COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml", "./PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml"]
-COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER",     "./PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER"]
-# The wireless kernel (DATATYPE.wireless.CSV/SRC/kernel), patched in below.
-COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.CSV/SRC/kernel", "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.CSV/SRC/kernel"]
-# The tool: the worker crate in SRC/, with its parser crate SRC/importer/.
-ARG TOOL=PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS
-COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS/SRC", "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS/SRC"]
-
-RUN cargo build --release --locked \
-      --config 'patch."https://github.com/LikeDotAudio/APK.plugin.SDK".apk-plugin-runner.path="PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER"' \
-      --config 'patch."https://github.com/LikeDotAudio/APK.plugin.SDK".apkaudio-contracts.path="PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust"' \
-      --config 'patch."https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV".apkaudio-wireless-kernel.path="PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.CSV/SRC/kernel"' \
-      --manifest-path "$TOOL/SRC/Cargo.toml" --bins \
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+RUN --mount=type=secret,id=apk_deps_token,required=false \
+    if [ -s /run/secrets/apk_deps_token ]; then \
+      git config --global url."https://x-access-token:$(cat /run/secrets/apk_deps_token)@github.com/".insteadOf "https://github.com/"; \
+    fi \
+ && cargo build --release --locked --manifest-path SRC/Cargo.toml --bins \
+ && rm -f /root/.gitconfig \
  && mkdir -p /out \
  && cp target/release/apk-worker-wireless-ias target/release/apk-plugin-health /out/
 

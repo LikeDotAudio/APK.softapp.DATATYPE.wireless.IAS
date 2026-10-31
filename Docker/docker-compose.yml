@@ -19,11 +19,11 @@ name: workers
 services:
   wireless-ias:
     build:
-      # The repo root, counted from THIS file's real path (PODS/README.md
-      # rule 2): Docker → DATATYPE.wireless.IAS → DATATYPE → Softapps →
-      # POD.THIN → PODS → root.
-      context: "../../../../../.."
-      dockerfile: "PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.wireless.IAS/Docker/Dockerfile"
+      # This repository's SRC/ (2026-10-30 audit): every dependency is a pinned
+      # git source; the private kernel's fetch takes the token as a secret.
+      context: "../SRC"
+      dockerfile: "../Docker/Dockerfile"
+      secrets: [apk_deps_token]
     image: worker-wireless-ias:local
     container_name: Worker-WIRELESS_IAS
     restart: unless-stopped
@@ -69,3 +69,9 @@ networks:
   bus:
     external: true
     name: apk-audio_default
+
+# The read token for the private kernel (DATATYPE.wireless.CSV), as a BuildKit
+# secret — never a build arg. `APK_DEPS_TOKEN=$(gh auth token)` on a dev machine.
+secrets:
+  apk_deps_token:
+    environment: APK_DEPS_TOKEN

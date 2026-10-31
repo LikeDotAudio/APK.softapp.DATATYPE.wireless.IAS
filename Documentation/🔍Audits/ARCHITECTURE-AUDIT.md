@@ -10,7 +10,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 | Talks to | How (topic / endpoint / file / import) | Relationship |
 |---|---|---|
 | Any job client (the Data Migration frame) | sub `APK.audio/System/Protocols/wireless_ias/outgoing/job`, pub `…/incoming/result` (`schema: 1`) | Published Language (job envelope, versioned) |
-| APK.plugin.SDK (`apk-plugin-runner`, `apkaudio-contracts`) | Cargo `tag = "sdk-v0.5"`, patched to the checkout locally and in the Dockerfile; job loop `apk_plugin_runner::jobs::JobWorker` | Conformist, by version |
+| APK.plugin.SDK (`apk-plugin-runner`, `apkaudio-contracts`) | Cargo `tag = "sdk-v0.7"`, pinned in Cargo.lock; job loop `apk_plugin_runner::jobs::JobWorker` | Conformist, by version |
 | DATATYPE.wireless.CSV `SRC/kernel` (`apkaudio-wireless-kernel`) | Cargo git rev (band rule, status word, job envelope) | Shared kernel, one-way |
 | MANAGEMENT.DataMigration | depends on `SRC/importer` (`apkaudio-wireless-ias`) by git rev | Supplier (crate) |
 | `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python) | `IMPORT:file:HTML/Entry.py` imports it; pinned by rev in `IMPORT:file:HTML/requirements.txt` | Supplier (package) |
@@ -20,7 +20,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 ## Scorecard
 | Category | Score (0–3) | Finding |
 |---|---|---|
-| Coupling & Cohesion | 2 | SDK by tag, parser a crate with one owner, no `#[path]` from another repo; the image context is the repo root until an SDK tag carries `jobs` |
+| Coupling & Cohesion | 3 | Builds from its own repository: SDK by tag and pinned git revs in Cargo.lock, image context `SRC/`; no other repository's file compiled or copied |
 | Boundary Integrity | 3 | Pure parser; MQTT only through the runner's `JobWorker`; versioned answer with a pinned shape |
 | Duplication Control | 3 | Job loop is the runner's, envelope and band rule the kernel's; MARKER_HEADERS/lifecycle shared via apk_wireless_import |
 | Testing & Contracts | 3 | `SRC/check.sh`: worker (incl. self test, topics, shape), parser + fixture tests, the Python edge's Tests/; DataMigration's frame-header contract test |
@@ -28,7 +28,6 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 Score key: 3 meets the standard · 2 minor gaps · 1 significant gaps · 0 absent / violated.
 
 ## Findings
-1. **Image builds from the monorepo root.** `Docker/Dockerfile` COPYs contracts, the runner and the CSV kernel and patches them in with `--config`, because `sdk-v0.5` predates `apk_plugin_runner::jobs` and the kernel rev is not pushed. Needs owner: publish the next SDK tag and push DATATYPE.wireless.CSV.
-2. **Good — no port, hardened container.** `cap_drop: [ALL]`, `read_only`, `no-new-privileges`, non-root uid 10001, runner health probe.
-3. **Good — topics from the contract.** `job_and_result_topics_are_this_modules` asserts the job/result topic strings.
-4. **Good — pure core, thin shell.** `handle_job` is three lines over the kernel; the parser publishes nothing.
+1. **Good — no port, hardened container.** `cap_drop: [ALL]`, `read_only`, `no-new-privileges`, non-root uid 10001, runner health probe.
+2. **Good — topics from the contract.** `job_and_result_topics_are_this_modules` asserts the job/result topic strings.
+3. **Good — pure core, thin shell.** `handle_job` is three lines over the kernel; the parser publishes nothing.

@@ -9,7 +9,7 @@
 # it by git rev. Nobody compiles this file by `#[path]` any more.
 [package]
 name = "apkaudio-wireless-ias"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -17,6 +17,6 @@ name = "apkaudio_wireless_ias"
 path = "src/lib.rs"
 
 [dependencies]
-apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "646e960e42ec13f2c39e4100a9019da9e4f632f6" }
+apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "6af4baa2c11a6ff6c7226ab3a45edd6a0c2dca79" }
 scraper = "0.18"
 serde = { version = "1.0", features = ["derive"] }

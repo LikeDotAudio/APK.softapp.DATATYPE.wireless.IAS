@@ -10,7 +10,7 @@ Importer for the IAS (Intermodulation Analysis System) HTML frequency-coordinati
 | Talks to | How (topic / endpoint / file / import) | Relationship |
 |---|---|---|
 | Any job client (the Data Migration frame) | sub `APK.audio/System/Protocols/wireless_ias/outgoing/job`, pub `…/incoming/result` (`schema: 1`) | Published Language (job envelope, versioned) |
-| APK.plugin.SDK (`apk-plugin-runner`, `apkaudio-contracts`) | Cargo `tag = "sdk-v0.7"`, pinned in Cargo.lock; job loop `apk_plugin_runner::jobs::JobWorker` | Conformist, by version |
+| APK.plugin.SDK (`apk-plugin-runner`, `apkaudio-contracts`) | Cargo `tag = "sdk-v0.9"`, pinned in Cargo.lock; job loop `apk_plugin_runner::jobs::JobWorker` | Conformist, by version |
 | DATATYPE.wireless.CSV `SRC/kernel` (`apkaudio-wireless-kernel`) | Cargo git rev (band rule, status word, job envelope) | Shared kernel, one-way |
 | MANAGEMENT.DataMigration | depends on `SRC/importer` (`apkaudio-wireless-ias`) by git rev | Supplier (crate) |
 | `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python) | `IMPORT.file.HTML/Entry.py` imports it; pinned by rev in `IMPORT.file.HTML/requirements.txt` | Supplier (package) |

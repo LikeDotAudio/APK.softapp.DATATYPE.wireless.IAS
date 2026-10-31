@@ -19,7 +19,7 @@ In the Data Migration tab, the *IAS* frame (`WEB.Frontend-Assets/SRC/FrontEnd/Gu
                     └─▶ reply {job_id, ok, result} → …/wireless_ias/incoming/result (not retained)
 ```
 
-`IasChannel { zone, group, device, name, freq_mhz, band_info }`; `IasParseResult { status, source_format: "IAS_HTML_Report", file_path, mqtt_topic, total_channels, skipped_rows, channels }`. The importer publishes nothing (LOOSE-datatype-datatype-wireless); `mqtt_topic` still names `…/DataMigration/IAS/ImportedData`, which nothing publishes to since the orchestrator's DataMigration inbox was retired (NODE.BareMetal ed053f0).
+`IasChannel { zone, group, device, name, freq_mhz, band_info }`; `IasParseResult { status, source_format: "IAS_HTML_Report", file_path, total_channels, skipped_rows, channels }`. The importer publishes nothing (LOOSE-datatype-datatype-wireless); it names no topic either (its `mqtt_topic` for the retired `…/IAS/ImportedData` was removed: LOOSE-importeddata-dead-topics).
 
 ## Files
 

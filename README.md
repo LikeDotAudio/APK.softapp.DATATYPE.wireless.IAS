@@ -44,10 +44,8 @@ zone headings were read in a separate pass before the tables, so every channel g
 `Zone 6`; `band_info` was the constant `"UHF"` and empty cells became `Generic RF` / `CH_<n>`.
 
 **No parse publishes** (since LOOSE-datatype-datatype-wireless). The functions return an
-`IasParseResult` (status, `source_format: "IAS_HTML_Report"`, file path, `mqtt_topic`, count,
+`IasParseResult` (status, `source_format: "IAS_HTML_Report"`, file path, count,
 skipped rows, channels) and open no broker connection, so a test run never overwrites live state.
-`mqtt_topic` still names `APK.audio/System/DataMigration/IAS/ImportedData` (from
-`apkaudio_contracts::topics::data_migration`), but nothing publishes there any more.
 
 Who calls it: the worker below (`SRC/src/lib.rs` `handle_job` → `classify_ias_str`); the Data
 Migration *IAS* frame posts the file to it as a job. The orchestrator's `DataMigration/+/FilePath`
@@ -111,7 +109,6 @@ cargo test --manifest-path SRC/Cargo.toml        # handle_job on the fixture, th
 
 - **The bus is the API, through the worker.** The parser publishes nothing; the worker answers a
   job on `wireless_ias/incoming/result`, unretained (`SRC/src/lib.rs`).
-- **Topics come from the contract, never typed out** (comment above `ias_mqtt_topic()`).
 - **One parser, no silent fallback.** The Python edge refuses to parse HTML itself; a missing Rust
   scraper shows as `STATUS = "unavailable"`, which a test checks, rather than as a report with no
   rows (`IMPORT:file:HTML/Entry.py` header).

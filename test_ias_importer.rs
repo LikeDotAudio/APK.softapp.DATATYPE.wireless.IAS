@@ -17,7 +17,6 @@ fn main() {
             println!("\n=== IAS PARSE SUCCESS ===");
             println!("Status: {}", result.status);
             println!("Source Format: {}", result.source_format);
-            println!("MQTT Topic: {}", result.mqtt_topic);
             println!("Total Channels Extracted: {}", result.total_channels);
             
             println!("\n--- Sample Extracted Channels (First 10) ---");

@@ -17,6 +17,11 @@ Remote: `https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.IAS.git` 
 
 **Not automated:** no CI runs the tests (the root CI verifies nothing on purpose; `SRC/check.sh` is the pre-push check); the Node-BareMetal rebuild is by hand.
 
+## Delivered 2026-10-31: portable file names (no `:` `|` or case twins)
+
+- The monorepo now checks out on Windows and macOS: no tracked name holds `<>:"|?*`, a trailing dot or space, a device name or a case-only twin. Colon folders became dot folders (the POD.x convention).
+- Renamed: `IMPORT:file:HTML` → `IMPORT.file.HTML` (loaded by file path, so nothing imports the folder name). References to NODE.BareMetal `CORE.engine.RUST` / `TEST.runner.PYTHON` follow.
+
 ## Delivered from the 2026-10-30 audit
 
 - **Loose files into SRC/ (CC-03, from the SDK/contracts audit)** — `ias_importer.rs` and its `test_*` runner left the stack root (a move begun by the peer SDK fixer, uncommitted, adopted here): the parser is now `SRC/importer/src/lib.rs` and the runner is `SRC/importer/tests/fixtures.rs`. Verified by `cargo test --workspace`.

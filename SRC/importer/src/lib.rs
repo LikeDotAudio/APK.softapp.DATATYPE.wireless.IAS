@@ -99,7 +99,7 @@ pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResu
                     Some(b_elem) => text_of(b_elem),
                     None => text_of(chunk[3]),
                 };
-                let usable = freq_text.parse::<f64>().ok().filter(|f| *f > 100.0 && *f < 3000.0);
+                let usable = apkaudio_wireless_kernel::usable_mhz_text(&freq_text);
                 if usable.is_none() && !(device.is_empty() && name.is_empty() && freq_text.is_empty()) {
                     skipped_rows += 1;
                 }
@@ -129,17 +129,16 @@ pub fn classify_ias_str(content: &str, source_name: &str) -> Result<IasParseResu
     })
 }
 
-/// "success" only when the report yielded channels; a parse that found none is
-/// "empty", never a success the panel would draw as an imported, blank table.
+/// "success" only when the report yielded channels — the kernel's one rule.
 fn status_for(channels: usize) -> String {
-    if channels > 0 { "success" } else { "empty" }.to_string()
+    apkaudio_wireless_kernel::import_status(channels)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const REPORT: &str = include_str!("test_data/report.html");
+    const REPORT: &str = include_str!("../../../test_data/report.html");
 
     #[test]
     fn each_channel_takes_the_zone_heading_above_its_table() {

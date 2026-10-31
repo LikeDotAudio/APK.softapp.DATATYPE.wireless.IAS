@@ -1,0 +1,22 @@
+# apkaudio-wireless-ias — the IAS HTML report parser, as a crate.
+#
+# Owns: the parser and its fixture tests over `../../test_data/`. Pure: no bus,
+# no runner. The band rule and the status word are the wireless kernel's
+# (apkaudio-wireless-kernel, DATATYPE.wireless.CSV/SRC/kernel, by git rev).
+#
+# ONE OWNER, TWO CONSUMERS (2026-10-30 audit): the worker beside it (`SRC/`)
+# links it by path; MANAGEMENT.DataMigration (and through it oaRustCore) links
+# it by git rev. Nobody compiles this file by `#[path]` any more.
+[package]
+name = "apkaudio-wireless-ias"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "apkaudio_wireless_ias"
+path = "src/lib.rs"
+
+[dependencies]
+apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "28c0554e2704022817ebd51aa46a9d4002c0f16b" }
+scraper = "0.18"
+serde = { version = "1.0", features = ["derive"] }

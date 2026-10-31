@@ -20,9 +20,14 @@
 # The header row is fixed by DataMigration's frame contract; `check.sh
 # datamigration` is what proves it still matches the Rust record.
 
-from importer_logging import matrix_log
+# MARKER_HEADERS, the lifecycle and the logging call come from
+# `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python, package
+# `apk-wireless-import`, pinned in requirements.txt beside this file) — one copy
+# for the IAS, SoundBase-PDF and Wireless Workbench edges. This edge no longer
+# imports NODE.BareMetal's `importer_logging`, so it needs no other repository on
+# PYTHONPATH.
 
-MARKER_HEADERS = ["ZONE", "GROUP", "DEVICE", "NAME", "FREQ_MHZ", "PEAK"]
+from apk_wireless_import import MARKER_HEADERS, Lifecycle, log
 
 try:
     from oaRustCore.html_scraper import scrape_tables as rust_scrape_tables
@@ -35,10 +40,9 @@ except ImportError:
 STATUS = "live" if rust_scrape_tables else "unavailable"
 
 
-# Inline comment: Logic for convert_ias_html_to_markers
 def convert_ias_html_to_markers(html_content):
     if rust_scrape_tables:
-        matrix_log("ui", "importer", "convert_ias_html_to_markers", "🚀 Using HIGH-PERFORMANCE RUST HTML scraper.", "DEBUG")
+        log("convert_ias_html_to_markers", "🚀 Using HIGH-PERFORMANCE RUST HTML scraper.")
         return MARKER_HEADERS, rust_scrape_tables(str(html_content))
     raise RuntimeError("Rust HTML parser required")
 
@@ -46,43 +50,24 @@ def convert_ias_html_to_markers(html_content):
 Marker_convert_IAShtml_report_to_csv = convert_ias_html_to_markers
 
 
-# Lifecycle. The importer holds no thread, socket or file between calls, so there is
-# nothing to start or stop: these exist because the importer interface names them,
-# and they say so rather than pretend to do something.
-def start():
-    """No-op by design: the importer is stateless between calls."""
-    return None
-
-
-def stop():
-    """No-op by design: the importer is stateless between calls."""
-    return None
-
-
-def status():
-    return STATUS
-
-
-def run_tests():
-    """Scrape a one-table report through the Rust scraper and check what comes back.
-
-    False when the scraper is unavailable or answers wrongly — never True for
-    having run nothing. (It used to return True unconditionally.)"""
-    if not rust_scrape_tables:
-        return False
+def _self_test():
+    """Scrape a one-table report through the Rust scraper and check what comes back."""
     html = (
         "<html><body><table>"
         "<tr><th>Name</th><th>Frequency</th></tr>"
         "<tr><td>Ch 1</td><td>470.125</td></tr>"
         "</table></body></html>"
     )
-    try:
-        headers, tables = convert_ias_html_to_markers(html)
-    except Exception as e:
-        matrix_log("ui", "importer", "run_tests", f"❌ IAS HTML scraper self-test raised: {e}", "ERROR")
-        return False
+    headers, tables = convert_ias_html_to_markers(html)
     tables = [list(t) for t in tables]
     return headers == MARKER_HEADERS and tables == [[{"Name": "Ch 1", "Frequency": "470.125"}]]
+
+
+# The importer interface's lifecycle, from the shared module: start/stop are
+# no-ops (stateless), run_tests() is False unless STATUS is "live" and the
+# scrape above answers right — never True for having run nothing.
+_life = Lifecycle(STATUS, self_test=_self_test)
+start, stop, status, run_tests = _life.start, _life.stop, _life.status, _life.run_tests
 
 
 __all__ = ["convert_ias_html_to_markers", "Marker_convert_IAShtml_report_to_csv", "MARKER_HEADERS", "STATUS", "start", "stop", "status", "run_tests"]

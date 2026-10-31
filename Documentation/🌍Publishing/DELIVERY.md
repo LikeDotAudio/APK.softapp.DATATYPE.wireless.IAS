@@ -6,13 +6,26 @@ The importer ships compiled into the orchestrator, and as a worker image of its 
 
 | What | Built by | Lands |
 |---|---|---|
-| `ias_importer.rs` | `MANAGEMENT.DataMigration` (`apkaudio-data-migration`) compiles it by `#[path]`; `oaRustCore` re-exports that crate as `data_migration`; `apkaudio-orchestrator` links it. `NODE.BareMetal/Docker/Dockerfile` copies `PODS/POD.THIN/Softapps` so the path resolves in the image. | the **Node-BareMetal** container (`node-baremetal:local`); after an edit, rebuild that stack (`MANAGER.Docktor/K8/up-stack.sh NODE.BareMetal`) |
+| the crate `apkaudio-wireless-ias` (`SRC/importer/`) | `MANAGEMENT.DataMigration` (`apkaudio-data-migration`) depends on it by git rev; `oaRustCore` re-exports that crate as `data_migration`; `apkaudio-orchestrator` links it. `NODE.BareMetal/Docker/Dockerfile` copies this repository so Core's `[patch]` resolves it locally. | the **Node-BareMetal** container (`node-baremetal:local`); after an edit, rebuild that stack (`MANAGER.Docktor/K8/up-stack.sh NODE.BareMetal`) |
 | `IMPORT:file:HTML/Entry.py` | nothing builds it; it is loaded by file path | read by `test_handler_status.py` |
 | the files | `PODS/POD.THIN/Softapps` copied into **WEB.Frontend-Assets**; the monorepo's FTPS job uploads the checkout to apk.audio | nothing opens them there |
-| `SRC/` + `ias_importer.rs` | `Docker/Dockerfile`, context the repo root (it links `contracts/` and `apk-plugin-runner`); `cargo build --release --locked` | the **Worker-WIRELESS_IAS** container (`worker-wireless-ias:local`, project `workers`, no port); after an edit, `docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build wireless-ias` |
+| `SRC/` (worker + `importer/`) | `Docker/Dockerfile`, context the repo root (SDK by tag `sdk-v0.5` and the wireless kernel by rev, each patched with `--config` to the checkout); `cargo build --release --locked` | the **Worker-WIRELESS_IAS** container (`worker-wireless-ias:local`, project `workers`, no port); after an edit, `docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build wireless-ias` |
 
 Remote: `https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.IAS.git` (no workflow of its own).
 
-**Tested:** by hand — `cargo test --lib ias` in MANAGEMENT.DataMigration (4 passed 2026-10-30); `test_handler_status.py` for the Python edge's `STATUS`. `.apk.scripts/smoke.py` checks only that HEAD is pushed ([SMOKE](../%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)).
+**Tested:** by hand, one command — `bash SRC/check.sh`: `cargo test --workspace --locked` in `SRC/` (worker 8, parser 4, fixture 1 — 2026-10-30), `pytest IMPORT:file:HTML/Tests` (5 passed); MANAGEMENT.DataMigration's `tests/frame_headers.rs` holds the records to the Data Migration frame. `.apk.scripts/smoke.py` checks only that HEAD is pushed ([SMOKE](../%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)).
 
-**Not automated:** no CI runs the tests; the Node-BareMetal rebuild is by hand. (`cargo run --bin test_ias_importer` only prints: the importer publishes nothing.)
+**Not automated:** no CI runs the tests (the root CI verifies nothing on purpose; `SRC/check.sh` is the pre-push check); the Node-BareMetal rebuild is by hand.
+
+## Delivered from the 2026-10-30 audit
+
+- **Loose files into SRC/ (CC-03, from the SDK/contracts audit)** — `ias_importer.rs` and its `test_*` runner left the stack root (a move begun by the peer SDK fixer, uncommitted, adopted here): the parser is now `SRC/importer/src/lib.rs` and the runner is `SRC/importer/tests/fixtures.rs`. Verified by `cargo test --workspace`.
+- **display.json requires (WK-07, from the SDK/contracts audit)** — `"requires": {"plugins": ["wireless_ias"], "services": ["broker"]}`, `entry: SRC/importer/src/lib.rs` (requires added by the peer SDK fixer, adopted here).
+- **Job loop from the runner** — `run_job_agent` is `apk_plugin_runner::jobs::JobWorker`; `handle_job` is three lines over the wireless kernel's `read_file_job` / `FileJob::answer`. The hand-built rumqttc session, `failure`, base64 decoding and size limit copied from the CSV worker are gone. Verified by the worker tests and the self test.
+- **SDK by tag** — runner and contracts from APK.plugin.SDK `tag = "sdk-v0.5"`, the kernel from DATATYPE.wireless.CSV by rev; git-excluded `SRC/.cargo/config.toml` and the Dockerfile's `--config` patch all three to the checkout; Cargo.lock refreshed (contracts 0.2.0, W01 handoff). Verified by `docker build` of the IAS image (same recipe) and `cargo test --locked`. Standalone needs the next SDK tag and the pushed kernel rev (owner).
+- **Parser is a crate DataMigration depends on** — `SRC/importer/` (`apkaudio-wireless-ias`), taken by MANAGEMENT.DataMigration by git rev instead of a `#[path]` include; the fixture path is this crate's own.
+- **Shared 100–3000 MHz rule** — the importer asks `apkaudio_wireless_kernel::usable_mhz…` and `import_status`; the three re-typed copies (IAS, SOUNDbase, WWB) and CSV's two are gone.
+- **Versioned result + shape test** — answers carry `schema: 1`; `the_result_shape_is_pinned` holds the result and channel keys.
+- **One local check** — `SRC/check.sh` (`cargo test --workspace --locked` + pytest); the root CI verifies nothing on purpose.
+- **Python edge: shared header row + lifecycle, no BareMetal import** — `IMPORT:file:HTML/Entry.py` takes `MARKER_HEADERS`, `Lifecycle` and `log` from `apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python, pinned by rev in `requirements.txt`) instead of its own copy and NODE.BareMetal's `importer_logging`; `run_tests()` is False unless live and the scrape answers. `Tests/` added (5 passed).
+

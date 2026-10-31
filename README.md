@@ -17,14 +17,14 @@
 
 | Path | What it is |
 |---|---|
-| `ias_importer.rs` | The importer. Compiled as module `ias_importer` of the `apkaudio-data-migration` crate. |
-| `test_ias_importer.rs` | A `[[bin]]` runner of that crate: parses one fixture, prints the first ten channels, exits 1 on failure. |
+| `SRC/importer/` | The parser crate `apkaudio-wireless-ias` and `tests/fixtures.rs` (the fixture, 168 channels). Linked by the worker by path, by MANAGEMENT.DataMigration by git rev. |
+| `SRC/check.sh` | Every check here in one command: `cargo test --workspace --locked` in `SRC/` (and pytest for the Python edge). |
 | `test_data/report.html` | Fixture: a real IAS report, seven `Zone:` headings, 168 channels. |
 | `IMPORT:file:HTML/Entry.py` | The Python edge — see below. |
-| `SRC/` | The worker crate `apk-worker-wireless-ias`: `ias_importer.rs` (by `#[path]`) behind a job loop on `apk-plugin-runner`, with its `config.ini` (section `[wireless_ias]`). Tested by `cargo test --manifest-path SRC/Cargo.toml`; built as the image `worker-wireless-ias:local`. |
+| `SRC/` | The worker crate `apk-worker-wireless-ias`: the parser crate `importer/` behind the runner's job loop (`apk_plugin_runner::jobs::JobWorker`) and the wireless kernel's job envelope, with its `config.ini` (section `[wireless_ias]`). Tested by `bash SRC/check.sh`; built as the image `worker-wireless-ias:local`. |
 | `Docker/` | The worker stack: container `Worker-WIRELESS_IAS`, project `workers`, no port. Included by `PODS/POD.workers/Docker/docker-compose.yml`. |
 
-### `ias_importer.rs`
+### `SRC/importer/` (`apkaudio-wireless-ias`)
 
 `classify_ias_str(html, source_name)` parses and has no side effect;
 `parse_ias_report(path)` reads a file and `parse_ias_report_str(html, source_name)` wraps it — neither publishes.
@@ -54,18 +54,17 @@ inbox that used to call `parse_ias_report_str` and publish the result retained w
 
 ### Build and test
 
-The crate is `Softapps/MANAGEMENT_AND_UTILITIES/MANAGEMENT.DataMigration` — `mod.rs` pulls this
-file in by `#[path]`, and `Cargo.toml` declares the runner as a `[[bin]]`:
-
 ```bash
-cd PODS/POD.THIN/Softapps/MANAGEMENT_AND_UTILITIES/MANAGEMENT.DataMigration
-cargo test --lib ias                     # the parser on the fixture; publishes nothing
-cargo run  --bin test_ias_importer       # prints a sample; publishes nothing
+bash SRC/check.sh                       # everything below, --locked
+cd SRC && cargo test --workspace        # worker (8), parser crate (4 + fixture 1)
 ```
 
-Checked 2026-10-30: `cargo test --lib ias` 4 passed. The runner reads the fixture from
-`../../DATATYPE/DATATYPE.wireless.IAS/test_data/report.html` (it used to look under the
-DataMigration crate, where it no longer is).
+The parser is the crate `apkaudio-wireless-ias` (`SRC/importer/`). The worker links it by path;
+MANAGEMENT.DataMigration (and through it oaRustCore) links it by git rev — nobody compiles the
+file by `#[path]` any more. `SRC/importer/tests/fixtures.rs` parses `test_data/report.html` from
+its path (168 channels); it was the `test_ias_importer` `[[bin]]` DataMigration built from this
+repository's file until the 2026-10-30 audit. The 100–3000 MHz guard and the status word are the
+wireless kernel's (`apkaudio-wireless-kernel`, DATATYPE.wireless.CSV/SRC/kernel, by git rev).
 
 ### `IMPORT:file:HTML/Entry.py` (Python)
 
@@ -76,8 +75,9 @@ if that module is not importable. `STATUS` is `"live"` or `"unavailable"` accord
 `PODS/POD.THICK/NODE.BareMetal/SRC/Core/TEST:runner:PYTHON/test_handler_status.py` loads this file
 by path to assert it. `run_tests()` scrapes a one-table report through that scraper and returns
 `False` when it is missing or answers wrongly — never `True` for having run nothing. `start`/`stop`
-are documented no-ops: the edge holds nothing between calls. Logging comes from `importer_logging`
-(in `NODE.BareMetal/SRC/Core/`).
+are documented no-ops: the edge holds nothing between calls. `MARKER_HEADERS`, the lifecycle and logging come from
+`apk_wireless_import` (DATATYPE.wireless.CSV/SRC/python, pinned in `requirements.txt`), not from
+NODE.BareMetal's `importer_logging`; `Tests/` here pins the behaviour (`python3 -m pytest -q Tests`).
 
 ---
 
@@ -86,21 +86,22 @@ are documented no-ops: the edge holds nothing between calls. Logging comes from 
 The same parser answers jobs on the bus (LOOSE-workers-convert-rest). A client subscribes to
 `APK.audio/System/Protocols/wireless_ias/incoming/result`, then publishes
 `{"job_id": "<yours>", "filename": "report.html", ...}` to `APK.audio/System/Protocols/wireless_ias/outgoing/job`
-with the file as "text". The answer carries the same `job_id`, `ok`, and the parse result of
+with the file as "text". The answer carries `schema: 1`, the same `job_id`, `ok`, and the parse result of
 `classify_ias_str` under `result`; a malformed job or one over `max_job_bytes` (8 MiB, `SRC/config.ini`) comes
 back `ok: false` with an `error`. Nothing is retained and the worker opens no port. Measured
 2026-10-30: the fixture `test_data/report.html` sent as a job came back `ok: true` with 168 channels.
 
 ```bash
 docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build wireless-ias
-cargo test --manifest-path SRC/Cargo.toml        # handle_job on the fixture, the self test
+bash SRC/check.sh                                # handle_job on the fixture, the self test, the shape test
 ```
 
 ## 🚀 Usage & Integration
 * **Web Portal Entry**: none of its own; the records are for the Data Migration frames under
   `PODS/POD.THIN/WEB.Frontend-Assets/SRC/FrontEnd/Gui_Frames/3_Data_Migration/`. `display.json`
-  declares the folder to the launcher; its `entry`, `main.py`, is not a file here, so the launcher
-  opens the folder itself.
+  declares the folder to the launcher with `entry: SRC/importer/src/lib.rs`, `tech: rust`, and
+  `requires: {plugins: [wireless_ias], services: [broker]}`, so the Launch Pad marks it when
+  Worker-WIRELESS_IAS is down.
 * **Remote Repository**: `https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.IAS.git`
 
 ---

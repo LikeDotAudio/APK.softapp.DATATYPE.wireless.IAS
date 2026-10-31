@@ -24,20 +24,9 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "apk-plugin-runner"
 version = "0.1.0"
-source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.6#a962a1bc190b1008a6670b3477ad82a15d50f184"
-dependencies = [
- "apkaudio-contracts 0.2.0 (git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.6)",
- "libc",
- "rumqttc",
- "serde_json",
-]
-
-[[package]]
-name = "apk-plugin-runner"
-version = "0.1.0"
 source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.7#017faf3df6f49b79b18b0199d1df2a9987972580"
 dependencies = [
- "apkaudio-contracts 0.2.0 (git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.7)",
+ "apkaudio-contracts",
  "libc",
  "rumqttc",
  "serde_json",
@@ -47,21 +36,11 @@ dependencies = [
 name = "apk-worker-wireless-ias"
 version = "0.2.0"
 dependencies = [
- "apk-plugin-runner 0.1.0 (git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.7)",
- "apkaudio-contracts 0.2.0 (git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.7)",
+ "apk-plugin-runner",
+ "apkaudio-contracts",
  "apkaudio-wireless-ias",
  "apkaudio-wireless-kernel",
  "base64",
- "serde_json",
-]
-
-[[package]]
-name = "apkaudio-contracts"
-version = "0.2.0"
-source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.6#a962a1bc190b1008a6670b3477ad82a15d50f184"
-dependencies = [
- "regress",
- "serde",
  "serde_json",
 ]
 
@@ -87,9 +66,9 @@ dependencies = [
 [[package]]
 name = "apkaudio-wireless-kernel"
 version = "0.1.0"
-source = "git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV?rev=628590d6a7d0ffd03e7ab3ee44e1ef37b4c3cd3b#628590d6a7d0ffd03e7ab3ee44e1ef37b4c3cd3b"
+source = "git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV?rev=646e960e42ec13f2c39e4100a9019da9e4f632f6#646e960e42ec13f2c39e4100a9019da9e4f632f6"
 dependencies = [
- "apk-plugin-runner 0.1.0 (git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.6)",
+ "apk-plugin-runner",
  "base64",
  "serde",
  "serde_json",

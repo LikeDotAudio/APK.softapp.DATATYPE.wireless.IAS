@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "apk-worker-wireless-ias"
-version = "0.3.0"
+version = "2.0.0"
 dependencies = [
  "apk-plugin-runner",
  "apkaudio-contracts",
@@ -56,7 +56,7 @@ dependencies = [
 
 [[package]]
 name = "apkaudio-wireless-ias"
-version = "0.2.0"
+version = "2.0.0"
 dependencies = [
  "apkaudio-wireless-kernel",
  "scraper",

@@ -9,7 +9,7 @@
 # it by git rev. Nobody compiles this file by `#[path]` any more.
 [package]
 name = "apkaudio-wireless-ias"
-version = "0.2.0"
+version = "2.0.0"
 edition = "2021"
 
 [lib]

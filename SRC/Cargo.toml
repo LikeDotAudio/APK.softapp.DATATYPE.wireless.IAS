@@ -23,7 +23,7 @@
 # a [patch] (the plugin_standalone.py shape) — and do not commit the lock it writes.
 [package]
 name = "apk-worker-wireless-ias"
-version = "0.3.0"
+version = "2.0.0"
 edition = "2024"
 
 [workspace]

@@ -55,7 +55,11 @@ pub fn handle_job(payload: &[u8], max_bytes: usize) -> Value {
 /// thread and exits the process if it ever returns, so Docker restarts it.
 pub fn run_job_agent(host: &str, port: u16) {
     let max = max_job_bytes(CONFIG_INI);
-    apk_plugin_runner::jobs::JobWorker::new(MODULE, TOOL, move |payload: &[u8]| handle_job(payload, max))
+    apk_plugin_runner::jobs::JobWorker::new(MODULE, TOOL, move |payload: &[u8]| {
+        // One job taken off outgoing/job and run: this worker's packet (ROAD-3472).
+        apk_plugin_runner::loopback::packet_received();
+        handle_job(payload, max)
+    })
         // A job is a file, and base64 grows it by a third.
         .max_packet(max / 3 * 4 + 64 * 1024)
         .describe(|a| format!("ok={} channels={}", a["ok"], a["result"]["total_channels"]))
@@ -65,6 +69,19 @@ pub fn run_job_agent(host: &str, port: u16) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The manifest the binary compiles in parses, declares the loopback port
+    /// and lists every key of config.ini's [wireless_ias] that code reads (ROAD-3472).
+    #[test]
+    fn the_compiled_in_manifest_parses_and_reads_every_config_key() {
+        let manifest = apkaudio_contracts::embedded_manifest!().expect("agent.toml parses");
+        assert_eq!(manifest.name, MODULE);
+        assert_eq!(manifest.kind, "worker");
+        assert_eq!(manifest.telemetry_port, 8225);
+        let config = apk_plugin_runner::ini_to_json(CONFIG_INI);
+        let keys: Vec<&str> = config[MODULE].as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(manifest.unread_config_keys(keys), Some(0), "a [wireless_ias] key nothing reads");
+    }
     use apkaudio_contracts::baremetal_io;
     use base64::Engine as _;
     use serde_json::json;

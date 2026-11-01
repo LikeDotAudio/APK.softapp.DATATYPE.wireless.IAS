@@ -17,6 +17,6 @@ name = "apkaudio_wireless_ias"
 path = "src/lib.rs"
 
 [dependencies]
-apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "6af4baa2c11a6ff6c7226ab3a45edd6a0c2dca79" }
+apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "3465a8d95fb52ec61867c66056b81ce0b7df2895" }
 scraper = "0.18"
 serde = { version = "1.0", features = ["derive"] }

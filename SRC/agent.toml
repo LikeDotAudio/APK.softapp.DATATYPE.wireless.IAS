@@ -25,4 +25,5 @@ port = 8225
 # apk-plugin-runner (module_raise, module_enabled), max_job_bytes by
 # src/lib.rs max_job_bytes. A key added there and not here is counted in
 # `unread_config_keys`.
-reads = ["raise", "enabled", "max_job_bytes"]
+# restate_s by src/carriers.rs, presence_* by the runner's presence tracker (ROAD-3519).
+reads = ["raise", "enabled", "max_job_bytes", "restate_s", "presence_protocols", "presence_inactive_after_s"]

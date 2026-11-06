@@ -1,3 +1,3 @@
 # The Python edge's one dependency: the wireless importers' shared module.
-apk-wireless-import @ git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV@52e568551a2f07fef4ecbfd41c4f3d3718216f53#subdirectory=SRC/python
+apk-wireless-import @ git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV@8b94322b1ae73bf3414ea69530b69980e6cd92d0#subdirectory=SRC/python
 # oaRustCore (the native engine) is optional: without it STATUS reads "unavailable".

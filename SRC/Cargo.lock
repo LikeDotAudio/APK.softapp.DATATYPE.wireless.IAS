@@ -24,7 +24,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "apk-plugin-runner"
 version = "2.0.0"
-source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.3#46bba0ac561f91d4ba4fbbd8cbb8620f650b41ef"
+source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.4#24496d9ecfd4376c404b71ceb6e05bee8ad805b0"
 dependencies = [
  "apkaudio-contracts",
  "libc",
@@ -46,8 +46,8 @@ dependencies = [
 
 [[package]]
 name = "apkaudio-contracts"
-version = "2.3.0"
-source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.3#46bba0ac561f91d4ba4fbbd8cbb8620f650b41ef"
+version = "2.4.0"
+source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.4#24496d9ecfd4376c404b71ceb6e05bee8ad805b0"
 dependencies = [
  "regress",
  "serde",
@@ -66,7 +66,7 @@ dependencies = [
 [[package]]
 name = "apkaudio-wireless-kernel"
 version = "2.0.0"
-source = "git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV?rev=8b94322b1ae73bf3414ea69530b69980e6cd92d0#8b94322b1ae73bf3414ea69530b69980e6cd92d0"
+source = "git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV?rev=d5022f2de42b54ee83349d7fbc9802d0cccb1559#d5022f2de42b54ee83349d7fbc9802d0cccb1559"
 dependencies = [
  "apk-plugin-runner",
  "base64",

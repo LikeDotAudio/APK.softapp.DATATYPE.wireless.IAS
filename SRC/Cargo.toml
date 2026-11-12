@@ -33,10 +33,10 @@ name = "apk_worker_wireless_ias"
 path = "src/lib.rs"
 
 [dependencies]
-apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v2.3" }
-apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v2.3" }
+apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v2.4" }
+apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v2.4" }
 apkaudio-wireless-ias = { path = "importer" }
-apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "8b94322b1ae73bf3414ea69530b69980e6cd92d0", features = ["worker"] }
+apkaudio-wireless-kernel = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.wireless.CSV", rev = "d5022f2de42b54ee83349d7fbc9802d0cccb1559", features = ["worker"] }
 serde_json = "1"
 
 [dev-dependencies]
